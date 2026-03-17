@@ -1,0 +1,1 @@
+{"models":{"random_forest":{"test_metrics":{"r2":0,"rmse":0,"mae":0}},"neural_network":{"test_metrics":{"r2":0,"rmse":0,"mae":0}}},"plots":{"scatter":{"y_true":[],"rf_pred":[],"nn_pred":[]},"residuals":{"rf_residuals":[],"nn_residuals":[]}}}
