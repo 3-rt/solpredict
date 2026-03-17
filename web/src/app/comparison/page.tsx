@@ -184,6 +184,46 @@ export default function ComparisonPage() {
         ))}
       </div>
 
+      {/* Residual distributions */}
+      <div className="grid grid-cols-2 gap-6 mb-8">
+        {[
+          { label: "Random Forest", color: "#60a5fa", residuals: data.plots.residuals.rf_residuals },
+          { label: "Neural Network", color: "#a78bfa", residuals: data.plots.residuals.nn_residuals },
+        ].map(({ label, color, residuals }) => {
+          // Bin residuals into a histogram
+          const binCount = 20;
+          const min = Math.min(...residuals);
+          const max = Math.max(...residuals);
+          const binWidth = (max - min) / binCount;
+          const bins = Array.from({ length: binCount }, (_, i) => {
+            const lo = min + i * binWidth;
+            const hi = lo + binWidth;
+            const count = residuals.filter((r) => r >= lo && (i === binCount - 1 ? r <= hi : r < hi)).length;
+            return { bin: lo.toFixed(1), count };
+          });
+          return (
+            <div key={label} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5">
+              <h3 className="text-sm font-semibold mb-4" style={{ color }}>
+                {label} — Residual Distribution
+              </h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={bins} margin={{ top: 5, right: 10, bottom: 20, left: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis
+                    dataKey="bin"
+                    tick={{ fill: "#64748b", fontSize: 9 }}
+                    label={{ value: "Residual", position: "insideBottom", offset: -10, fill: "#94a3b8", fontSize: 11 }}
+                  />
+                  <YAxis tick={{ fill: "#64748b", fontSize: 10 }} />
+                  <Tooltip {...TOOLTIP_STYLE} />
+                  <Bar dataKey="count" fill={color} fillOpacity={0.7} radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Bar chart */}
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-6">
         <h2 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-4">

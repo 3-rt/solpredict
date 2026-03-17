@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
 const EXAMPLES = [
   { name: "Aspirin", smiles: "CC(=O)Oc1ccccc1C(=O)O" },
   { name: "Caffeine", smiles: "Cn1c(=O)c2c(ncn2C)n(C)c1=O" },
@@ -10,171 +12,210 @@ const EXAMPLES = [
   { name: "Ibuprofen", smiles: "CC(C)Cc1ccc(cc1)C(C)C(=O)O" },
 ];
 
-interface PredictResult {
-  rf_prediction: number;
-  nn_prediction: number;
-  molecular_properties: {
+interface PredictionResult {
+  smiles: string;
+  valid: boolean;
+  predictions?: { random_forest?: number; neural_network?: number };
+  descriptors?: {
     molecular_weight: number;
     logp: number;
     hbd: number;
     hba: number;
     tpsa: number;
   };
+  molecule_name?: string | null;
+  error?: string;
 }
 
 export default function PredictPage() {
   const [smiles, setSmiles] = useState("");
+  const [result, setResult] = useState<PredictionResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<PredictResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handlePredict() {
-    if (!smiles.trim()) return;
+  async function handlePredict(input?: string) {
+    const smilesInput = (input || smiles).trim();
+    if (!smilesInput) return;
+
     setLoading(true);
-    setResult(null);
     setError(null);
+    setResult(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/predict`, {
+      const res = await fetch(`${API_URL}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ smiles: smiles.trim() }),
+        body: JSON.stringify({ smiles: smilesInput }),
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.detail ?? `Server error: ${res.status}`);
-      }
-
-      const data: PredictResult = await res.json();
+      const data: PredictionResult = await res.json();
       setResult(data);
-    } catch (err: unknown) {
-      if (err instanceof TypeError && err.message.includes("fetch")) {
-        setError("Cannot reach the prediction API. Make sure the backend is running.");
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unexpected error occurred.");
+      if (!data.valid) {
+        setError(data.error || "Invalid SMILES string");
       }
+    } catch {
+      setError(
+        "Could not reach prediction server. It may be waking up — try again in 30 seconds."
+      );
     } finally {
       setLoading(false);
     }
   }
 
+  function handleExample(mol: { name: string; smiles: string }) {
+    setSmiles(mol.smiles);
+    handlePredict(mol.smiles);
+  }
+
   return (
-    <div className="min-h-screen px-6 py-10 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-          Predict Solubility
+    <div className="max-w-3xl mx-auto px-6 py-12">
+      {/* Hero */}
+      <div className="text-center mb-10">
+        <h1 className="text-3xl font-semibold mb-2">
+          Molecular Solubility Prediction
         </h1>
-        <p className="text-[var(--text-secondary)]">
-          Enter a SMILES string to predict aqueous solubility (log mol/L) using
-          Random Forest and Neural Network models.
+        <p className="text-[var(--text-muted)] text-sm">
+          Predict aqueous solubility using Random Forest and Neural Network
+          models trained on the ESOL dataset
         </p>
       </div>
 
       {/* Input */}
-      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-6 mb-6">
-        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-          SMILES String
-        </label>
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={smiles}
-            onChange={(e) => setSmiles(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handlePredict()}
-            placeholder="e.g. CCO"
-            className="flex-1 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-indigo)] transition-colors text-sm font-mono"
-          />
-          <button
-            onClick={handlePredict}
-            disabled={loading || !smiles.trim()}
-            className="px-6 py-2.5 rounded-lg font-semibold text-sm bg-[var(--accent-indigo)] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-          >
-            {loading ? "Predicting..." : "Predict"}
-          </button>
-        </div>
+      <div className="flex gap-2 mb-3">
+        <input
+          type="text"
+          value={smiles}
+          onChange={(e) => setSmiles(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handlePredict()}
+          placeholder="Enter SMILES string (e.g., CCO for ethanol)"
+          className="flex-1 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-indigo)]"
+        />
+        <button
+          onClick={() => handlePredict()}
+          disabled={loading || !smiles.trim()}
+          className="bg-[var(--accent-indigo)] text-white px-5 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          {loading ? "Predicting..." : "Predict"}
+        </button>
+      </div>
 
-        {/* Example pills */}
-        <div className="mt-4">
-          <p className="text-xs text-[var(--text-muted)] mb-2">Examples:</p>
-          <div className="flex flex-wrap gap-2">
-            {EXAMPLES.map((ex) => (
-              <button
-                key={ex.name}
-                onClick={() => {
-                  setSmiles(ex.smiles);
-                  setResult(null);
-                  setError(null);
-                }}
-                className="px-3 py-1 text-xs rounded-full border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent-indigo)] hover:text-[var(--accent-indigo)] transition-colors"
-              >
-                {ex.name}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Example pills */}
+      <div className="flex flex-wrap gap-2 justify-center mb-10">
+        {EXAMPLES.map((mol) => (
+          <button
+            key={mol.name}
+            onClick={() => handleExample(mol)}
+            className="bg-[var(--bg-card)] border border-[var(--border)] rounded-full px-3 py-1 text-xs text-[var(--text-secondary)] hover:border-[var(--accent-indigo)] transition-colors"
+          >
+            {mol.name}
+          </button>
+        ))}
       </div>
 
       {/* Error */}
       {error && (
-        <div className="bg-red-950/40 border border-red-800 rounded-xl p-4 mb-6 text-red-300 text-sm">
+        <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-6 text-sm text-red-300">
           {error}
         </div>
       )}
 
       {/* Results */}
-      {result && (
+      {result && result.valid && (
         <>
+          {/* Molecule name */}
+          {result.molecule_name && (
+            <p className="text-center text-[var(--text-secondary)] text-sm mb-4">
+              Showing predictions for{" "}
+              <span className="font-semibold text-[var(--text-primary)]">
+                {result.molecule_name}
+              </span>
+            </p>
+          )}
+
           {/* Prediction cards */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            {/* RF card */}
-            <div className="bg-[var(--bg-card)] border border-[var(--accent-blue)]/40 rounded-xl p-6">
-              <div className="text-xs font-semibold text-[var(--accent-blue)] uppercase tracking-wider mb-1">
-                Random Forest
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Random Forest */}
+            <div className="bg-[var(--bg-secondary)] border border-blue-900/50 rounded-xl p-5">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs text-[var(--accent-blue)] uppercase tracking-wider font-semibold">
+                  Random Forest
+                </span>
+                <span className="text-[10px] text-[var(--text-muted)] bg-[#1e293b] px-2 py-0.5 rounded">
+                  sklearn
+                </span>
               </div>
-              <div className="text-4xl font-bold text-[var(--accent-blue)] mb-1">
-                {result.rf_prediction.toFixed(3)}
+              <div className="text-3xl font-bold mb-1">
+                {result.predictions?.random_forest?.toFixed(2) ?? "—"}
               </div>
-              <div className="text-xs text-[var(--text-muted)]">log(S) mol/L</div>
+              <div className="text-xs text-[var(--text-muted)]">log mol/L</div>
             </div>
 
-            {/* NN card */}
-            <div className="bg-[var(--bg-card)] border border-[var(--accent-purple)]/40 rounded-xl p-6">
-              <div className="text-xs font-semibold text-[var(--accent-purple)] uppercase tracking-wider mb-1">
-                Neural Network
+            {/* Neural Network */}
+            <div className="bg-[var(--bg-secondary)] border border-purple-900/50 rounded-xl p-5">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs text-[var(--accent-purple)] uppercase tracking-wider font-semibold">
+                  Neural Network
+                </span>
+                <span className="text-[10px] text-[var(--text-muted)] bg-[#1e293b] px-2 py-0.5 rounded">
+                  PyTorch
+                </span>
               </div>
-              <div className="text-4xl font-bold text-[var(--accent-purple)] mb-1">
-                {result.nn_prediction.toFixed(3)}
+              <div className="text-3xl font-bold mb-1">
+                {result.predictions?.neural_network?.toFixed(2) ?? "—"}
               </div>
-              <div className="text-xs text-[var(--text-muted)]">log(S) mol/L</div>
+              <div className="text-xs text-[var(--text-muted)]">log mol/L</div>
             </div>
           </div>
 
           {/* Molecular properties */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-6">
-            <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-4">
-              Molecular Properties
-            </h3>
-            <div className="grid grid-cols-5 gap-4">
-              {[
-                { label: "Mol. Weight", value: result.molecular_properties.molecular_weight.toFixed(1), unit: "g/mol" },
-                { label: "LogP", value: result.molecular_properties.logp.toFixed(2), unit: "" },
-                { label: "HBD", value: result.molecular_properties.hbd.toString(), unit: "donors" },
-                { label: "HBA", value: result.molecular_properties.hba.toString(), unit: "acceptors" },
-                { label: "TPSA", value: result.molecular_properties.tpsa.toFixed(1), unit: "Å²" },
-              ].map((prop) => (
-                <div key={prop.label} className="text-center">
-                  <div className="text-lg font-semibold text-[var(--text-primary)]">{prop.value}</div>
-                  {prop.unit && <div className="text-xs text-[var(--text-muted)]">{prop.unit}</div>}
-                  <div className="text-xs text-[var(--text-secondary)] mt-1">{prop.label}</div>
+          {result.descriptors && (
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-5">
+              <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-3">
+                Molecular Properties
+              </div>
+              <div className="grid grid-cols-5 gap-4 text-center">
+                <div>
+                  <div className="text-lg font-semibold">
+                    {result.descriptors.molecular_weight}
+                  </div>
+                  <div className="text-[10px] text-[var(--text-muted)]">
+                    Mol. Weight
+                  </div>
                 </div>
-              ))}
+                <div>
+                  <div className="text-lg font-semibold">
+                    {result.descriptors.logp}
+                  </div>
+                  <div className="text-[10px] text-[var(--text-muted)]">
+                    LogP
+                  </div>
+                </div>
+                <div>
+                  <div className="text-lg font-semibold">
+                    {result.descriptors.hbd}
+                  </div>
+                  <div className="text-[10px] text-[var(--text-muted)]">
+                    H-Bond Donors
+                  </div>
+                </div>
+                <div>
+                  <div className="text-lg font-semibold">
+                    {result.descriptors.hba}
+                  </div>
+                  <div className="text-[10px] text-[var(--text-muted)]">
+                    H-Bond Acceptors
+                  </div>
+                </div>
+                <div>
+                  <div className="text-lg font-semibold">
+                    {result.descriptors.tpsa}
+                  </div>
+                  <div className="text-[10px] text-[var(--text-muted)]">
+                    TPSA
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>
