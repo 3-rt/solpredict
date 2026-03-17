@@ -49,9 +49,10 @@ ESOL (Estimated SOLubility) — ~1,128 molecules with experimentally measured lo
 - Serves as a strong baseline
 
 **Neural Network (PyTorch):**
-- 3-layer MLP: 2048 → 512 → 128 → 1
+- 3-layer MLP: 2048 → 512 → 128 → 1 (fingerprint-only input)
 - ReLU activations, dropout (0.2), Adam optimizer
 - Simple enough to explain, complex enough to be interesting
+- Uses only Morgan fingerprints as input (not descriptors) to keep the architecture straightforward
 
 **Training:**
 - 80/20 train/test split, fixed random seed for reproducibility
@@ -100,7 +101,17 @@ Structured like a research notebook with markdown sections: Introduction, Data E
     "hba": 1,
     "tpsa": 20.23
   },
-  "molecule_name": "Ethanol"
+  "molecule_name": "Ethanol or null if not in known list"
+}
+```
+
+When `valid` is `false` (invalid SMILES):
+
+```json
+{
+  "smiles": "INVALID",
+  "valid": false,
+  "error": "Could not parse SMILES string"
 }
 ```
 
@@ -141,7 +152,7 @@ Dark theme, clean and minimal. Scientific but modern — professional research t
 - All data loaded from static JSON exported during training
 
 **3. Methodology**
-- How Morgan fingerprints work (with diagrams)
+- How Morgan fingerprints work (with static SVG/images — pre-made, not generated)
 - Model architecture descriptions
 - Dataset information and preprocessing steps
 - The "research paper" page — demonstrates chemistry domain knowledge
