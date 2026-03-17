@@ -1,1 +1,10 @@
 .superpowers/
+__pycache__/
+*.pyc
+.venv/
+.env
+node_modules/
+.next/
+*.pkl
+*.pt
+.ipynb_checkpoints/

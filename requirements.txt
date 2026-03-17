@@ -1,0 +1,9 @@
+rdkit
+numpy
+pandas
+scikit-learn
+torch
+joblib
+matplotlib
+jupyter
+pytest
