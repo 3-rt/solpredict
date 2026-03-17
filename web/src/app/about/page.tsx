@@ -104,13 +104,13 @@ export default function AboutPage() {
           {[
             {
               label: "GitHub Repository",
-              href: "https://github.com/example/solpredict",
+              href: "https://github.com/3-rt/solpredict",
               desc: "Source code for the ML pipeline and web application",
               accent: "var(--accent-indigo)",
             },
             {
               label: "Training Notebook",
-              href: "https://github.com/example/solpredict/blob/main/notebook.ipynb",
+              href: "https://github.com/3-rt/solpredict/blob/main/notebooks/training.ipynb",
               desc: "Jupyter notebook with exploratory data analysis and model training",
               accent: "var(--accent-blue)",
             },
