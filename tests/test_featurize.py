@@ -22,6 +22,15 @@ def test_fingerprint_custom_params():
     assert fp.shape == (1024,)
 
 
+def test_fingerprint_does_not_emit_rdkit_deprecation_warning(capfd):
+    """Fingerprint generation should not use RDKit's deprecated Morgan API."""
+    fp = smiles_to_fingerprint("CCO")
+    captured = capfd.readouterr()
+
+    assert fp is not None
+    assert "please use MorganGenerator" not in captured.err
+
+
 def test_descriptors_valid_smiles():
     """Ethanol descriptors should be chemically reasonable."""
     desc = smiles_to_descriptors("CCO")

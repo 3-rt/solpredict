@@ -8,7 +8,7 @@ representation for ML on molecules.
 
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import AllChem, Descriptors
+from rdkit.Chem import Descriptors, rdFingerprintGenerator
 
 
 def smiles_to_fingerprint(
@@ -30,8 +30,8 @@ def smiles_to_fingerprint(
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         return None
-    fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=n_bits)
-    return np.array(fp, dtype=np.int8)
+    generator = rdFingerprintGenerator.GetMorganGenerator(radius=radius, fpSize=n_bits)
+    return generator.GetFingerprintAsNumPy(mol).astype(np.int8, copy=False)
 
 
 def smiles_to_descriptors(smiles: str) -> dict | None:

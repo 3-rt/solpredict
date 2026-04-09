@@ -11,24 +11,44 @@ models trained on the [ESOL dataset](https://pubs.acs.org/doi/10.1021/ci034243x)
 
 ## Quick Start
 
-### Training
+You need **two terminals** to run the full stack locally (API + dashboard).
+Training is a one-time setup step you run first.
+
+### 1. Install & Train (one-time setup)
+
+All commands assume you're in the **project root** (`solpredict/`).
 
 ```bash
+# Create a virtual environment and install dependencies
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+
+# Train the models (generates files in models/)
 python scripts/train.py
 ```
 
-### API (local)
+### 2. Start the API — Terminal 1
 
 ```bash
+# From the project root, with the venv activated
+source .venv/bin/activate
+pip install -r api/requirements.txt
 uvicorn api.main:app --port 7860
 ```
 
-### Dashboard (local)
+The API will be running at `http://localhost:7860`. Keep this terminal open.
+
+### 3. Start the Dashboard — Terminal 2
 
 ```bash
-cd web && npm install && npm run dev
+# From the project root, in a new terminal
+cd web
+npm install
+npm run dev
 ```
+
+The dashboard will be running at `http://localhost:3000`. It talks to the API on port 7860.
 
 ## Project Structure
 
@@ -44,14 +64,3 @@ cd web && npm install && npm run dev
 
 See `data/results.json` for full metrics, or visit the live dashboard's Model Comparison page.
 
-## Deployment
-
-### Vercel (Frontend)
-1. Connect GitHub repo
-2. Set root directory: `web/`
-3. Add env var: `NEXT_PUBLIC_API_URL=https://your-hf-space.hf.space`
-
-### HuggingFace Spaces (API)
-1. Create a new Docker Space
-2. Upload: `api/`, `solpredict/`, `models/`
-3. The Dockerfile handles the rest
