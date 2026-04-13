@@ -191,7 +191,7 @@ def export_results(
             "name": "ESOL (Delaney)",
             "n_molecules": 1128,
             "target": "log(solubility) in mol/L",
-            "split": f"{int((1-TEST_SIZE)*100)}/{int(TEST_SIZE*100)} train/test",
+            "split": f"{int((1 - TEST_SIZE) * 100)}/{int(TEST_SIZE * 100)} train/test",
             "random_seed": RANDOM_SEED,
         },
         "models": {
@@ -252,7 +252,7 @@ def main():
     df = load_data(DATA_PATH)
 
     print("\nGenerating molecular fingerprints and descriptors...")
-    fingerprints, descriptors, valid_mask = featurize_dataset(df)
+    fingerprints, _descriptors, valid_mask = featurize_dataset(df)
     y = df.loc[valid_mask, "log_solubility"].values
 
     X_train, X_test, y_train, y_test = train_test_split(

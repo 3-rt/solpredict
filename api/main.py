@@ -8,11 +8,11 @@ from pathlib import Path
 
 import joblib
 import torch
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from alembic import command
-from alembic.config import Config
 from api.routes.history import router as history_router
 from api.routes.models import router as models_router
 from api.routes.predict import router as predict_router
