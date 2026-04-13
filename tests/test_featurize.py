@@ -1,5 +1,6 @@
 import numpy as np
-from solpredict.featurize import smiles_to_fingerprint, smiles_to_descriptors
+
+from solpredict.featurize import smiles_to_descriptors, smiles_to_fingerprint
 
 
 def test_fingerprint_valid_smiles():

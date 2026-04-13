@@ -48,11 +48,13 @@ class Settings(BaseSettings):
     @classmethod
     def _absolutize(cls, v: str) -> str:
         if v.startswith("file://"):
-            raw = v[len("file://"):]
+            raw = v[len("file://") :]
             p = Path(raw)
             return f"file://{p if p.is_absolute() else (PROJECT_ROOT / p).resolve()}"
         p = Path(v)
-        if not p.is_absolute() and not v.startswith(("sqlite:", "postgresql:", "mysql:", "http", "mlflow:")):
+        if not p.is_absolute() and not v.startswith(
+            ("sqlite:", "postgresql:", "mysql:", "http", "mlflow:")
+        ):
             return str((PROJECT_ROOT / p).resolve())
         return v
 
