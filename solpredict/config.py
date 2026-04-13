@@ -44,14 +44,24 @@ class Settings(BaseSettings):
     log_level: LogLevel = "INFO"
     json_logs: bool = False
 
-    @field_validator("model_dir", "data_dir", "cache_dir")
+    @field_validator("model_dir", "data_dir", "cache_dir", "mlflow_tracking_uri")
     @classmethod
     def _absolutize(cls, v: str) -> str:
+        if v.startswith("file://"):
+            raw = v[len("file://"):]
+            p = Path(raw)
+            return f"file://{p if p.is_absolute() else (PROJECT_ROOT / p).resolve()}"
         p = Path(v)
-        return str(p if p.is_absolute() else (PROJECT_ROOT / p).resolve())
+        if not p.is_absolute() and not v.startswith(("sqlite:", "postgresql:", "mysql:", "http", "mlflow:")):
+            return str((PROJECT_ROOT / p).resolve())
+        return v
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Return the process-wide Settings singleton."""
+    """Return the process-wide Settings singleton.
+
+    The result is cached. In tests that mutate environment variables, call
+    ``get_settings.cache_clear()`` to force a re-read.
+    """
     return Settings()

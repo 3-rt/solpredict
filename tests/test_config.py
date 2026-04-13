@@ -1,9 +1,15 @@
-import os
 from pathlib import Path
 
 import pytest
 
 from solpredict.config import Settings, get_settings
+
+
+@pytest.fixture(autouse=True)
+def _clear_settings_cache():
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 def test_defaults_are_sensible(monkeypatch):
@@ -44,3 +50,30 @@ def test_paths_are_absolute():
     s = Settings(_env_file=None)
     assert Path(s.model_dir).is_absolute()
     assert Path(s.data_dir).is_absolute()
+
+
+def test_absolutize_relative_path(monkeypatch, tmp_path):
+    monkeypatch.setenv("MODEL_DIR", "relative/path")
+    s = Settings(_env_file=None)
+    assert Path(s.model_dir).is_absolute()
+    assert s.model_dir.endswith("relative/path")
+
+
+def test_absolute_path_override_is_preserved(monkeypatch, tmp_path):
+    abs_dir = str(tmp_path / "custom")
+    monkeypatch.setenv("MODEL_DIR", abs_dir)
+    s = Settings(_env_file=None)
+    assert s.model_dir == abs_dir
+
+
+def test_mlflow_relative_file_uri_absolutized(monkeypatch):
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "file://./custom_mlruns")
+    s = Settings(_env_file=None)
+    assert s.mlflow_tracking_uri.startswith("file:///")
+    assert "custom_mlruns" in s.mlflow_tracking_uri
+
+
+def test_db_url_scheme_passthrough(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@h/db")
+    s = Settings(_env_file=None)
+    assert s.database_url == "postgresql://u:p@h/db"
