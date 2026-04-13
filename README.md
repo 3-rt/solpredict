@@ -63,4 +63,3 @@ The dashboard will be running at `http://localhost:3000`. It talks to the API on
 ## Results
 
 See `data/results.json` for full metrics, or visit the live dashboard's Model Comparison page.
-

@@ -174,10 +174,16 @@ def train_neural_network(X_train, y_train, X_test, y_test):
 
 
 def export_results(
-    y_test, rf_pred, nn_pred,
-    rf_train_metrics, rf_test_metrics,
-    nn_train_metrics, nn_test_metrics,
-    nn_training_losses, rf_model, feature_names=None
+    y_test,
+    rf_pred,
+    nn_pred,
+    rf_train_metrics,
+    rf_test_metrics,
+    nn_train_metrics,
+    nn_test_metrics,
+    nn_training_losses,
+    rf_model,
+    feature_names=None,
 ):
     """Export all results as JSON for the web dashboard."""
     results = {
@@ -254,9 +260,7 @@ def main():
     )
     print(f"\nTrain: {len(X_train)} molecules, Test: {len(X_test)} molecules")
 
-    rf_model, rf_pred, rf_train, rf_test = train_random_forest(
-        X_train, y_train, X_test, y_test
-    )
+    rf_model, rf_pred, rf_train, rf_test = train_random_forest(X_train, y_train, X_test, y_test)
     nn_model, nn_pred, nn_train, nn_test, nn_losses = train_neural_network(
         X_train, y_train, X_test, y_test
     )
@@ -267,9 +271,15 @@ def main():
     print(f"\nModels saved to {RF_MODEL_PATH} and {NN_MODEL_PATH}")
 
     export_results(
-        y_test, rf_pred, nn_pred,
-        rf_train, rf_test, nn_train, nn_test,
-        nn_losses, rf_model,
+        y_test,
+        rf_pred,
+        nn_pred,
+        rf_train,
+        rf_test,
+        nn_train,
+        nn_test,
+        nn_losses,
+        rf_model,
     )
 
     print("\n✓ Training complete!")

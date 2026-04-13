@@ -126,10 +126,12 @@ def examples():
             with torch.no_grad():
                 x = torch.FloatTensor(fp.astype(np.float32)).unsqueeze(0)
                 predictions["neural_network"] = round(float(nn_model(x).item()), 4)
-        results.append({
-            "smiles": smiles,
-            "name": name,
-            "predictions": predictions,
-            "descriptors": descriptors,
-        })
+        results.append(
+            {
+                "smiles": smiles,
+                "name": name,
+                "predictions": predictions,
+                "descriptors": descriptors,
+            }
+        )
     return results
