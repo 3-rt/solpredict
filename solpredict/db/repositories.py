@@ -61,6 +61,17 @@ def get_active_model(session: Session, name: str) -> ModelVersion | None:
     )
 
 
+def get_model_version_by_name_and_version(
+    session: Session,
+    *,
+    name: str,
+    version: str,
+) -> ModelVersion | None:
+    return session.scalar(
+        select(ModelVersion).where(ModelVersion.name == name, ModelVersion.version == version)
+    )
+
+
 def record_prediction(
     session: Session,
     *,

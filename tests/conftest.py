@@ -80,6 +80,19 @@ def db_session_factory(db_engine):
 
 
 @pytest.fixture
+def training_tmp_dirs(tmp_path, monkeypatch):
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", f"file://{tmp_path / 'mlruns'}")
+    monkeypatch.setenv("CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("MODEL_DIR", str(tmp_path / "models"))
+    monkeypatch.setenv("RESULTS_PATH", str(tmp_path / "results.json"))
+    get_settings.cache_clear()
+    try:
+        yield tmp_path
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.fixture
 def client(db_session_factory, monkeypatch):
     monkeypatch.setenv("SOLPREDICT_SKIP_MIGRATIONS", "1")
     monkeypatch.setattr("api.main.get_session_factory", lambda: db_session_factory)

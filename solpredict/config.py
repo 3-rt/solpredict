@@ -34,17 +34,30 @@ class Settings(BaseSettings):
     model_dir: str = str(PROJECT_ROOT / "models")
     data_dir: str = str(PROJECT_ROOT / "data")
     cache_dir: str = str(PROJECT_ROOT / "data" / "cache")
+    esol_csv_path: str = str(PROJECT_ROOT / "data" / "esol.csv")
+    results_path: str = str(PROJECT_ROOT / "data" / "results.json")
 
     # ML hyperparameters / reproducibility
     random_seed: int = 42
     fp_radius: int = 2
     fp_nbits: int = 2048
+    train_test_size: float = 0.2
+    cv_folds: int = 5
+    optuna_trials: int = 50
+    mlp_epochs: int = 100
 
     # Logging
     log_level: LogLevel = "INFO"
     json_logs: bool = False
 
-    @field_validator("model_dir", "data_dir", "cache_dir", "mlflow_tracking_uri")
+    @field_validator(
+        "model_dir",
+        "data_dir",
+        "cache_dir",
+        "mlflow_tracking_uri",
+        "esol_csv_path",
+        "results_path",
+    )
     @classmethod
     def _absolutize(cls, v: str) -> str:
         if v.startswith("file://"):

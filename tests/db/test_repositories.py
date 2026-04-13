@@ -1,6 +1,7 @@
 from solpredict.db.models import ModelVersion
 from solpredict.db.repositories import (
     get_active_model,
+    get_model_version_by_name_and_version,
     get_recent_predictions,
     list_model_versions,
     record_prediction,
@@ -78,3 +79,26 @@ def test_list_model_versions_returns_active_first(db_session) -> None:
     rows = list_model_versions(db_session, limit=10)
     assert rows[0].is_active is True
     assert isinstance(rows[0], ModelVersion)
+
+
+def test_get_model_version_by_name_and_version_finds_row(db_session) -> None:
+    row = upsert_model_version(
+        db_session,
+        name="random_forest",
+        version="2026.04.12-rf",
+        artifact_path="models/random_forest.pkl",
+        mlflow_run_id=None,
+        trained_at=None,
+        cv_r2_mean=0.71,
+        cv_rmse_mean=1.17,
+        test_r2=0.70,
+        test_rmse=1.20,
+        hyperparameters={"n_estimators": 100},
+    )
+    fetched = get_model_version_by_name_and_version(
+        db_session,
+        name="random_forest",
+        version="2026.04.12-rf",
+    )
+    assert fetched is not None
+    assert fetched.id == row.id
