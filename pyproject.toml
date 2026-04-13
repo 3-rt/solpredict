@@ -30,7 +30,6 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.10",
     "pre-commit>=3.7",
-    "types-requests",
 ]
 test = [
     "pytest>=8.0",
@@ -60,7 +59,7 @@ select = [
     "SIM",
     "RUF",
 ]
-ignore = ["E501"]
+ignore = []
 
 [tool.ruff.format]
 quote-style = "double"
@@ -75,7 +74,7 @@ module = ["api.*", "scripts.*", "tests.*"]
 ignore_errors = true
 
 [[tool.mypy.overrides]]
-module = ["rdkit.*", "joblib.*", "sklearn.*"]
+module = ["rdkit.*", "torch.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
