@@ -2,54 +2,90 @@
 
 ## Dataset
 
-**ESOL (Delaney)** — 1,128 organic molecules with experimentally measured aqueous solubility values. The target variable is log(solubility) in mol/L, ranging from roughly -11 to +2.
+SolPredict is trained on the ESOL (Delaney) dataset: 1,128 small organic molecules with experimentally measured aqueous solubility values expressed as `log(solubility)` in mol/L.
 
-Source: Delaney, J.S. "ESOL: Estimating Aqueous Solubility Directly from Molecular Structure." *J. Chem. Inf. Comput. Sci.* 2004, 44, 1000-1005.
-
-Split: 80% train (902 molecules), 20% test (226 molecules), random seed 42.
+- target range is roughly `-11` to `+2`
+- the default holdout split is 80/20
+- reproducibility defaults to random seed `42`
 
 ## Feature Representation
 
-Each molecule is represented as a **2048-bit Morgan fingerprint** (radius=2), which is equivalent to ECFP4 — a standard circular fingerprint in cheminformatics. Each bit indicates the presence or absence of a particular molecular substructure within a 2-bond radius of each atom.
+Every molecule is converted into:
 
-Morgan fingerprints are the input to both models. Molecular descriptors (MW, LogP, etc.) are computed separately for interpretability but are not used as model features.
+- a 2048-bit Morgan fingerprint (`radius=2`, ECFP4-style)
+- an interpretable descriptor payload (`molecular_weight`, `logp`, `hbd`, `hba`, `tpsa`)
+
+The fingerprint is the actual model input. Descriptors are used for API output and dashboard display, not for training.
 
 ## Random Forest
 
-- **Library:** scikit-learn
-- **Configuration:** 100 trees, default hyperparameters
-- **Input:** Raw 2048-bit fingerprint vectors
+- library: scikit-learn
+- feature input: raw Morgan fingerprints
+- default no-tune path:
+  - `n_estimators=200`
+  - `max_features="sqrt"`
+  - `min_samples_split=2`
+  - `min_samples_leaf=1`
 
-| Split | R² | RMSE | MAE |
-|-------|-----|------|-----|
-| Train | 0.94 | 0.51 | 0.35 |
-| Test | 0.71 | 1.17 | 0.88 |
+During a tuned run, Optuna searches over tree count, depth, split thresholds, leaf thresholds, and feature-subsampling strategy. The final trained version is stored in:
 
-The gap between train and test R² (0.94 vs 0.71) suggests some overfitting, which is expected for Random Forest on a small dataset without hyperparameter tuning.
+- local artifact: `models/random_forest.pkl`
+- model registry row: `model_versions.name == "random_forest"`
 
 ## Neural Network
 
-- **Library:** PyTorch
-- **Architecture:** Linear(2048→512) → ReLU → Dropout(0.2) → Linear(512→128) → ReLU → Dropout(0.2) → Linear(128→1)
-- **Optimizer:** Adam (lr=0.001)
-- **Training:** 100 epochs, batch size 64, MSE loss
+- library: PyTorch
+- model class: `SolubilityMLP`
+- configurable hidden layers and dropout
+- default no-tune path:
+  - `hidden_dims=(512, 128)`
+  - `dropout=0.2`
+  - `lr=1e-3`
+  - `batch_size=64`
+  - `weight_decay=1e-5`
+  - `epochs=100`
 
-| Split | R² | RMSE | MAE |
-|-------|-----|------|-----|
-| Train | 0.98 | 0.32 | 0.16 |
-| Test | 0.75 | 1.09 | 0.79 |
+During a tuned run, Optuna searches over hidden-layer layouts, dropout, learning rate, batch size, and weight decay. The API reconstructs the tuned architecture from the stored hyperparameters before loading weights.
 
-The MLP slightly outperforms Random Forest on the test set (R² 0.75 vs 0.71). Both models show the train-test gap typical of small datasets.
+Artifacts:
 
-## Evaluation Metrics
+- local artifact: `models/neural_network.pt`
+- model registry row: `model_versions.name == "neural_network"`
 
-- **R² (coefficient of determination):** Proportion of variance explained. 1.0 is perfect; 0.0 means the model is no better than predicting the mean.
-- **RMSE (root mean squared error):** Average prediction error in log(mol/L). Penalizes large errors more than MAE.
-- **MAE (mean absolute error):** Average absolute prediction error. More robust to outliers than RMSE.
+## Evaluation and Registry
+
+Both models are evaluated with:
+
+- `R²`
+- `RMSE`
+- `MAE`
+
+Phase 2 added two places where those metrics live:
+
+- `data/results.json`
+  - powers the dashboard comparison and chart views
+- `model_versions`
+  - stores CV means, test metrics, trained timestamp, active flag, and MLflow run id
+
+This avoids hard-coding a single metric snapshot in documentation. The latest values depend on the most recent training run.
+
+## Tracking
+
+Each final retraining run is logged to MLflow.
+
+- RF uses `mlflow.sklearn.log_model`
+- NN uses `mlflow.pytorch.log_model`
+- the resulting run id is persisted in `model_versions.mlflow_run_id`
+
+By default the tracking store is local:
+
+```text
+file://./mlruns
+```
 
 ## Limitations
 
-- Small dataset (1,128 molecules) limits generalization
-- No hyperparameter tuning — both models use reasonable defaults
-- Morgan fingerprints lose 3D structural information
-- Predictions are most reliable for molecules similar to the ESOL training set (small organic druglike molecules)
+- ESOL is small, so both models remain data-limited
+- fingerprints capture 2D structure only
+- prediction quality is best for molecules similar to the training distribution
+- the dashboard-compatible local artifacts are still filesystem based, even though the registry tracks version metadata separately
