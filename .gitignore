@@ -9,3 +9,12 @@ node_modules/
 *.pkl
 *.pt
 .ipynb_checkpoints/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.egg-info/
+build/
+dist/
