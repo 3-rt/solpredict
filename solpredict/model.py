@@ -1,15 +1,18 @@
 """Neural network model for solubility prediction.
 
 A simple multi-layer perceptron (MLP) that takes Morgan fingerprints as input
-and predicts log solubility. The architecture is intentionally simple:
-three fully-connected layers with ReLU activation and dropout for regularization.
+and predicts log solubility. The architecture is parameterized by ``input_dim``
+and ``hidden_dims``: for each hidden dim the model stacks Linear -> ReLU ->
+Dropout, then a final Linear projection to a scalar output.
 
-Architecture: 2048 → 512 → 128 → 1
-- Input: 2048-bit Morgan fingerprint
-- Hidden layers reduce dimensionality while learning non-linear relationships
-- Dropout (20%) prevents overfitting on the small ESOL dataset
+Architecture: input_dim -> *hidden_dims -> 1
+- Input: ``input_dim`` (default 2048) Morgan fingerprint bits
+- Hidden layers: configurable via ``hidden_dims`` tuple (default ``(512, 128)``)
+- Dropout (default 20%) prevents overfitting on the small ESOL dataset
 - Single output: predicted log(solubility) in mol/L
 """
+
+from __future__ import annotations
 
 import torch
 import torch.nn as nn
@@ -18,17 +21,26 @@ import torch.nn as nn
 class SolubilityMLP(nn.Module):
     """Multi-layer perceptron for predicting molecular solubility."""
 
-    def __init__(self, input_dim: int = 2048) -> None:
+    def __init__(
+        self,
+        input_dim: int = 2048,
+        hidden_dims: tuple[int, ...] = (512, 128),
+        dropout: float = 0.2,
+    ) -> None:
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, 512),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(512, 128),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(128, 1),
-        )
+        layers: list[nn.Module] = []
+        previous_dim = input_dim
+        for hidden_dim in hidden_dims:
+            layers.extend(
+                [
+                    nn.Linear(previous_dim, hidden_dim),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                ]
+            )
+            previous_dim = hidden_dim
+        layers.append(nn.Linear(previous_dim, 1))
+        self.net = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass. Returns shape (batch_size,)."""
