@@ -16,6 +16,7 @@ from alembic import command
 from api.routes.history import router as history_router
 from api.routes.models import router as models_router
 from api.routes.predict import router as predict_router
+from solpredict.config import get_settings
 from solpredict.db.engine import get_session_factory
 from solpredict.db.repositories import get_active_model
 from solpredict.model import SolubilityMLP
@@ -57,7 +58,16 @@ def load_models(app: FastAPI) -> None:
     if rf_path.exists():
         rf_model = joblib.load(rf_path)
     if nn_path.exists():
-        nn_model = SolubilityMLP(input_dim=2048)
+        nn_params = nn_model_version.hyperparameters if nn_model_version else {}
+        hidden_dims = nn_params.get("hidden_dims", (512, 128))
+        if isinstance(hidden_dims, list):
+            hidden_dims = tuple(hidden_dims)
+        dropout = float(nn_params.get("dropout", 0.2))
+        nn_model = SolubilityMLP(
+            input_dim=get_settings().fp_nbits,
+            hidden_dims=tuple(hidden_dims),
+            dropout=dropout,
+        )
         nn_model.load_state_dict(torch.load(nn_path, map_location="cpu", weights_only=True))
         nn_model.eval()
 
