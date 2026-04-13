@@ -18,7 +18,7 @@ import torch.nn as nn
 class SolubilityMLP(nn.Module):
     """Multi-layer perceptron for predicting molecular solubility."""
 
-    def __init__(self, input_dim: int = 2048):
+    def __init__(self, input_dim: int = 2048) -> None:
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, 512),
@@ -32,4 +32,5 @@ class SolubilityMLP(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass. Returns shape (batch_size,)."""
-        return self.net(x).squeeze(-1)
+        out: torch.Tensor = self.net(x).squeeze(-1)
+        return out

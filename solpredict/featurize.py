@@ -6,14 +6,17 @@ radius from each atom) is present in the molecule. These are the standard
 representation for ML on molecules.
 """
 
+from typing import Any
+
 import numpy as np
+from numpy.typing import NDArray
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdFingerprintGenerator
 
 
 def smiles_to_fingerprint(
     smiles: str, radius: int = 2, n_bits: int = 2048
-) -> np.ndarray | None:
+) -> NDArray[np.int8] | None:
     """Convert a SMILES string to a Morgan fingerprint bit vector.
 
     Args:
@@ -31,10 +34,11 @@ def smiles_to_fingerprint(
     if mol is None:
         return None
     generator = rdFingerprintGenerator.GetMorganGenerator(radius=radius, fpSize=n_bits)
-    return generator.GetFingerprintAsNumPy(mol).astype(np.int8, copy=False)
+    fp: NDArray[np.int8] = generator.GetFingerprintAsNumPy(mol).astype(np.int8, copy=False)
+    return fp
 
 
-def smiles_to_descriptors(smiles: str) -> dict | None:
+def smiles_to_descriptors(smiles: str) -> dict[str, Any] | None:
     """Compute interpretable molecular descriptors from a SMILES string.
 
     These descriptors are human-readable properties that chemists use to
@@ -54,9 +58,9 @@ def smiles_to_descriptors(smiles: str) -> dict | None:
     if mol is None:
         return None
     return {
-        "molecular_weight": round(Descriptors.MolWt(mol), 2),
-        "logp": round(Descriptors.MolLogP(mol), 2),
-        "hbd": Descriptors.NumHDonors(mol),
-        "hba": Descriptors.NumHAcceptors(mol),
-        "tpsa": round(Descriptors.TPSA(mol), 2),
+        "molecular_weight": round(Descriptors.MolWt(mol), 2),  # type: ignore[attr-defined]
+        "logp": round(Descriptors.MolLogP(mol), 2),  # type: ignore[attr-defined]
+        "hbd": Descriptors.NumHDonors(mol),  # type: ignore[attr-defined]
+        "hba": Descriptors.NumHAcceptors(mol),  # type: ignore[attr-defined]
+        "tpsa": round(Descriptors.TPSA(mol), 2),  # type: ignore[attr-defined]
     }

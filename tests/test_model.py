@@ -1,5 +1,5 @@
 import torch
-import numpy as np
+
 from solpredict.model import SolubilityMLP
 
 

@@ -1,9 +1,3 @@
-rdkit
-numpy
-pandas
-scikit-learn
-torch
-joblib
-matplotlib
-jupyter
-pytest
+# Deprecated — use `pip install -e ".[dev,test,api,notebook]"` instead.
+# This file is kept for backwards compatibility with external tools.
+-e .[dev,test,api,notebook]
