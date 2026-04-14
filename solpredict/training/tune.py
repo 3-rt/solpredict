@@ -283,7 +283,7 @@ def tune_models(
                     trial.set_user_attr("cv_metrics", metrics)
                     return float(metrics["rmse_mean"])
 
-            study.optimize(objective, n_trials=n_trials)
+            study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
             best_params = _coerce_best_params(model_name, dict(study.best_params))
             best_metrics = dict(study.best_trial.user_attrs["cv_metrics"])
             results[model_name] = TuneResult(
