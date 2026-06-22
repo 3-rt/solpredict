@@ -32,6 +32,7 @@ SolPredict now has four connected layers: training, shared application code, a F
                               ▼
                  ┌──────────────────────────────┐
                  │ Next.js single-page dashboard│
+                 │ same-origin API proxy routes │
                  │ predict + history + compare  │
                  └──────────────────────────────┘
 ```
@@ -95,6 +96,7 @@ The FastAPI app lives under `api/`.
   - creates the app
   - runs `alembic upgrade head` at startup unless disabled
   - loads active model versions from the DB
+  - falls back to bundled model artifacts if registry artifact paths are stale
   - reconstructs the tuned MLP architecture from stored hyperparameters before loading weights
 - `api/routes/predict.py`
   - prediction and example routes
@@ -109,6 +111,15 @@ The API depends on the shared package rather than keeping separate featurization
 ## Frontend Layer
 
 The frontend is a single-page Next.js app in `web/`.
+
+In production, the browser calls same-origin routes on Vercel:
+
+- `web/src/app/predict/route.ts`
+- `web/src/app/history/route.ts`
+- `web/src/app/models/route.ts`
+
+Those routes proxy to Railway using `SOLPREDICT_API_URL`. This keeps the UI code stable across
+local and hosted environments and avoids deploying browser bundles with a stale API origin.
 
 Homepage sections:
 
@@ -140,14 +151,20 @@ This split keeps interactive prediction and historical exploration separate whil
 ### Prediction
 
 1. User submits SMILES in the dashboard.
-2. Frontend POSTs to `/predict`.
-3. API featurizes the molecule with RDKit.
-4. Loaded RF and NN models predict log(solubility).
-5. API returns predictions plus descriptors.
-6. API records the request in `predictions` best-effort.
+2. Frontend POSTs to `/predict` on the current origin.
+3. In production, Vercel proxies that request to Railway.
+4. API featurizes the molecule with RDKit.
+5. Loaded RF and NN models predict log(solubility).
+6. API returns predictions plus descriptors.
+7. API records the request in `predictions` best-effort.
 
 ### History / Registry
 
 1. Frontend fetches `/history` and `/models`.
-2. API queries SQLAlchemy repositories.
-3. Frontend renders active model metadata, distribution summaries, and paginated rows.
+2. In production, Vercel proxies those requests to Railway.
+3. API queries SQLAlchemy repositories.
+4. Frontend renders active model metadata, distribution summaries, and paginated rows.
+
+Fresh production databases need active `model_versions` rows before the active-model cards can
+render real versions. Without those rows, predictions can still work from bundled artifacts,
+but the UI will show active models as unavailable and history rows can show `n/a` model tags.

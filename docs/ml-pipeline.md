@@ -121,6 +121,12 @@ Stored metadata includes:
 
 The API uses the active registry rows to know which artifacts to load at startup.
 
+In production, a fresh Railway PostgreSQL database can be seeded manually with rows that point
+to the bundled Docker image artifacts. That is acceptable for inference-only deployments, but
+those rows will not have test/CV metrics unless they are inserted manually. Running
+`scripts/train.py` against the same `DATABASE_URL` is the full path that writes artifacts,
+metrics, and registry metadata together.
+
 ## Outputs
 
 After a successful run you should have:
@@ -150,3 +156,4 @@ That keeps the run cheap while still exercising:
 
 - The pipeline still writes local compatibility artifacts because the API loads from filesystem paths today.
 - The registry and MLflow tracking make those artifacts versioned and inspectable, even though deployment still uses the local copies.
+- Railway deployments should use PostgreSQL through `DATABASE_URL`; Alembic creates tables at API startup, but it does not register model versions by itself.
