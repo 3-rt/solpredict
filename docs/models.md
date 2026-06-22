@@ -69,6 +69,28 @@ Phase 2 added two places where those metrics live:
 
 This avoids hard-coding a single metric snapshot in documentation. The latest values depend on the most recent training run.
 
+## Production Registry Rows
+
+The API can load the bundled artifacts even when no registry rows exist, but the dashboard
+active-model strip depends on `/models`. A fresh Railway PostgreSQL database therefore needs
+active `model_versions` rows.
+
+For bundled production artifacts, the expected active labels are:
+
+- `railway-bundled-rf`
+- `railway-bundled-nn`
+
+Those labels mean the deployed API is using the model files included in the Docker image. If
+the metric fields are `NULL`, the dashboard will correctly show `No metrics available yet`.
+
+New prediction history rows only receive model-version tags after:
+
+1. active rows exist in `model_versions`
+2. the API process has restarted and loaded those rows
+3. the prediction is created
+
+Rows created earlier can still show `n/a`.
+
 ## Tracking
 
 Each final retraining run is logged to MLflow.
@@ -89,3 +111,4 @@ file://./mlruns
 - fingerprints capture 2D structure only
 - prediction quality is best for molecules similar to the training distribution
 - the dashboard-compatible local artifacts are still filesystem based, even though the registry tracks version metadata separately
+- manually seeded production registry rows do not include evaluation metrics unless those columns are filled explicitly

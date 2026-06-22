@@ -103,6 +103,83 @@ LOG_LEVEL=INFO
 JSON_LOGS=false
 ```
 
+## Production Deployment
+
+The production app is split across two hosts:
+
+- Railway runs the FastAPI API and PostgreSQL database.
+- Vercel runs the Next.js dashboard.
+
+Deploy Railway first, then Vercel.
+
+### Railway API
+
+Required Railway API service variables:
+
+```dotenv
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+LOG_LEVEL=INFO
+JSON_LOGS=false
+```
+
+Do not set `SOLPREDICT_SKIP_MIGRATIONS=1` in production. The API runs Alembic on startup
+and creates the `model_versions`, `predictions`, and `alembic_version` tables automatically.
+
+The API Docker image includes the bundled inference artifacts:
+
+- `models/random_forest.pkl`
+- `models/neural_network.pt`
+
+Training is not run during deploy. Training only runs when `python3 scripts/train.py` is
+executed explicitly.
+
+### Vercel Dashboard
+
+Required Vercel variable:
+
+```dotenv
+SOLPREDICT_API_URL=https://<railway-api-public-domain>
+```
+
+Use the Railway API base URL only. Do not include `/predict`, `/models`, or `/history`.
+
+The dashboard calls same-origin routes (`/predict`, `/history`, `/models`) in production.
+Those Next.js route handlers proxy to `SOLPREDICT_API_URL`, which avoids exposing backend
+routing details in the browser bundle. `NEXT_PUBLIC_API_URL` is not required for the current
+proxy setup.
+
+### Production Smoke Tests
+
+After Railway deploys:
+
+```bash
+curl https://<railway-api-public-domain>/health
+curl https://<railway-api-public-domain>/models
+curl "https://<railway-api-public-domain>/history?limit=10&offset=0"
+```
+
+After Vercel deploys:
+
+```bash
+curl https://<vercel-domain>/models
+curl "https://<vercel-domain>/history?limit=10&offset=0"
+curl -X POST https://<vercel-domain>/predict \
+  -H "content-type: application/json" \
+  --data '{"smiles":"CCO"}'
+```
+
+Expected `/health` model status:
+
+```json
+{
+  "status": "ok",
+  "models_loaded": {
+    "random_forest": true,
+    "neural_network": true
+  }
+}
+```
+
 ## Database and Migrations
 
 Alembic manages the application schema.
@@ -119,6 +196,10 @@ Current schema includes:
 
 - `model_versions` — registered RF/NN artifacts, metrics, hyperparameters, and active-version flags
 - `predictions` — persisted `/predict` calls with descriptors, timestamps, and optional model-version foreign keys
+
+If a fresh production database has no model registry rows, predictions can still work from
+the bundled model files, but the dashboard will show active models as unavailable. See
+[docs/deployment.md](docs/deployment.md) for the production seed SQL.
 
 ## Development
 
@@ -146,6 +227,7 @@ npm run build
 
 - [docs/architecture.md](docs/architecture.md)
 - [docs/api-reference.md](docs/api-reference.md)
+- [docs/deployment.md](docs/deployment.md)
 - [docs/models.md](docs/models.md)
 - [docs/ml-pipeline.md](docs/ml-pipeline.md)
 

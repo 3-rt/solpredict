@@ -1,6 +1,15 @@
 # API Reference
 
-Base URL (local): `http://localhost:7860`
+Base URL (local API): `http://localhost:7860`
+
+Production has two relevant origins:
+
+- Railway API origin: `https://<railway-api-public-domain>`
+- Vercel web origin: `https://<vercel-domain>`
+
+The Vercel app exposes same-origin `/predict`, `/history`, and `/models` route handlers that
+proxy to Railway through `SOLPREDICT_API_URL`. Browser code should call the Vercel same-origin
+routes; operational smoke tests can call either Vercel or Railway directly.
 
 ## GET /health
 
@@ -64,6 +73,7 @@ Notes:
 - values are `log(solubility)` in mol/L
 - more negative means less soluble
 - successful predictions are persisted to history on a best-effort basis
+- if active model-version rows exist at API startup, history rows store their IDs
 
 ## GET /examples
 
@@ -111,6 +121,10 @@ Paginated prediction history.
 
 Rows are ordered newest-first.
 
+If `rf_model_version` or `nn_model_version` is `null`, the prediction was recorded before an
+active registry row existed or before the API process was restarted after seeding registry
+rows.
+
 ## GET /models
 
 Returns recent model-version records, with active versions first.
@@ -138,9 +152,14 @@ Returns recent model-version records, with active versions first.
 ]
 ```
 
+If this endpoint returns `[]`, predictions may still work from bundled artifacts, but the
+dashboard active-model cards will show `Unavailable`. Seed the production `model_versions`
+table or run training against the same database.
+
 ## Local Runtime Notes
 
 - `uvicorn api.main:app --port 7860` starts the API
 - startup runs `alembic upgrade head` unless `SOLPREDICT_SKIP_MIGRATIONS=1`
 - if active model versions exist in the DB, the API loads those artifact paths first
-- otherwise it falls back to `models/random_forest.pkl` and `models/neural_network.pt`
+- if registered artifact paths are stale or no active rows exist, it falls back to `models/random_forest.pkl` and `models/neural_network.pt`
+- PostgreSQL deployments require `psycopg2-binary` to be installed
