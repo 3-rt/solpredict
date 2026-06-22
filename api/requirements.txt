@@ -5,3 +5,4 @@ scikit-learn
 torch
 numpy
 joblib
+psycopg2-binary
