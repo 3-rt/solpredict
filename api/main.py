@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -23,6 +24,7 @@ from solpredict.model import SolubilityMLP
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODEL_DIR = PROJECT_ROOT / "models"
+logger = logging.getLogger(__name__)
 
 
 def run_startup_migrations() -> None:
@@ -45,15 +47,15 @@ def load_models(app: FastAPI) -> None:
         rf_model_version = get_active_model(session, "random_forest")
         nn_model_version = get_active_model(session, "neural_network")
 
-    rf_path = (
-        Path(rf_model_version.artifact_path)
-        if rf_model_version
-        else MODEL_DIR / "random_forest.pkl"
+    rf_path = _model_artifact_path(
+        artifact_path=rf_model_version.artifact_path if rf_model_version else None,
+        fallback_path=MODEL_DIR / "random_forest.pkl",
+        model_name="random_forest",
     )
-    nn_path = (
-        Path(nn_model_version.artifact_path)
-        if nn_model_version
-        else MODEL_DIR / "neural_network.pt"
+    nn_path = _model_artifact_path(
+        artifact_path=nn_model_version.artifact_path if nn_model_version else None,
+        fallback_path=MODEL_DIR / "neural_network.pt",
+        model_name="neural_network",
     )
 
     if rf_path.exists():
@@ -76,6 +78,27 @@ def load_models(app: FastAPI) -> None:
     app.state.nn_model = nn_model
     app.state.rf_model_version = rf_model_version
     app.state.nn_model_version = nn_model_version
+
+
+def _model_artifact_path(
+    *,
+    artifact_path: str | None,
+    fallback_path: Path,
+    model_name: str,
+) -> Path:
+    if artifact_path:
+        registered_path = Path(artifact_path)
+        if registered_path.exists():
+            return registered_path
+        logger.warning(
+            "Registered model artifact does not exist; using bundled fallback",
+            extra={
+                "model_name": model_name,
+                "registered_path": str(registered_path),
+                "fallback_path": str(fallback_path),
+            },
+        )
+    return fallback_path
 
 
 @asynccontextmanager
