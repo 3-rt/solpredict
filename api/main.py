@@ -30,6 +30,7 @@ def run_startup_migrations() -> None:
         return
 
     config = Config(str(PROJECT_ROOT / "alembic.ini"))
+    config.set_main_option("sqlalchemy.url", get_settings().database_url)
     command.upgrade(config, "head")
 
 

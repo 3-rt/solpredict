@@ -9,6 +9,11 @@ node_modules/
 .next/
 *.pkl
 *.pt
+!models/random_forest.pkl
+!models/neural_network.pt
+*.db
+data/cache/
+mlruns/
 .ipynb_checkpoints/
 .mypy_cache/
 .ruff_cache/
