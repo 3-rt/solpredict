@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
 def configure_mlflow_tracking(tracking_uri: str) -> str:
     """Point MLflow at the configured backend, creating local file stores when needed."""
     if tracking_uri.startswith("file://"):
+        os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
         Path(tracking_uri.removeprefix("file://")).mkdir(parents=True, exist_ok=True)
     with warnings.catch_warnings():
         warnings.filterwarnings(

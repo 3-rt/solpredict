@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import mlflow
@@ -9,10 +10,15 @@ from solpredict.tracking import configure_mlflow_tracking
 from solpredict.training.pipeline import run_training_pipeline
 
 
-def test_configure_mlflow_tracking_creates_local_store(tmp_path: Path) -> None:
+def test_configure_mlflow_tracking_creates_local_store(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("MLFLOW_ALLOW_FILE_STORE", raising=False)
     uri = f"file://{tmp_path / 'mlruns'}"
     configure_mlflow_tracking(uri)
     assert mlflow.get_tracking_uri() == uri
+    assert os.environ["MLFLOW_ALLOW_FILE_STORE"] == "true"
 
 
 def test_run_training_pipeline_writes_artifacts_results_and_db_rows(

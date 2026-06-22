@@ -12,9 +12,9 @@ license = { text = "MIT" }
 authors = [{ name = "Basil Liu" }]
 dependencies = [
     "rdkit>=2024.3",
-    "numpy>=1.26",
+    "numpy>=1.26,<2.3",
     "pandas>=2.1",
-    "scikit-learn>=1.4",
+    "scikit-learn>=1.4,<1.9",
     "torch>=2.2",
     "joblib>=1.3",
     "pydantic>=2.6",
