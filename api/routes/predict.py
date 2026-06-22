@@ -12,7 +12,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from api.deps import get_db
-from solpredict.db.repositories import record_prediction
+from solpredict.db.models import ModelVersion
+from solpredict.db.repositories import get_active_model, record_prediction
 from solpredict.featurize import smiles_to_descriptors, smiles_to_fingerprint
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,14 @@ KNOWN_MOLECULES = {
     "CCCCCCCCCCCC": "Dodecane",
     "c1ccc2cc3ccccc3cc2c1": "Anthracene",
 }
+
+
+def active_model_version(
+    startup_version: ModelVersion | None,
+    db: Session,
+    name: str,
+) -> ModelVersion | None:
+    return startup_version or get_active_model(db, name)
 
 
 class PredictRequest(BaseModel):
@@ -75,14 +84,25 @@ def predict(
             nn_pred = nn_model(x).item()
             predictions["neural_network"] = round(float(nn_pred), 4)
 
+    rf_model_version = active_model_version(
+        getattr(request.app.state, "rf_model_version", None),
+        db,
+        "random_forest",
+    )
+    nn_model_version = active_model_version(
+        getattr(request.app.state, "nn_model_version", None),
+        db,
+        "neural_network",
+    )
+
     try:
         record_prediction(
             db,
             smiles=smiles,
             rf_prediction=predictions.get("random_forest"),
             nn_prediction=predictions.get("neural_network"),
-            rf_model_version_id=getattr(request.app.state.rf_model_version, "id", None),
-            nn_model_version_id=getattr(request.app.state.nn_model_version, "id", None),
+            rf_model_version_id=getattr(rf_model_version, "id", None),
+            nn_model_version_id=getattr(nn_model_version, "id", None),
             descriptors=descriptors or {},
             molecule_name=KNOWN_MOLECULES.get(smiles),
             client_ip=request.client.host if request.client else None,

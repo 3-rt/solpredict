@@ -75,6 +75,61 @@ def test_predict_falls_back_to_bundled_artifacts_when_active_paths_are_stale(
     assert "neural_network" in data["predictions"]
 
 
+def test_predict_records_model_versions_seeded_after_startup(
+    db_session_factory,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("SOLPREDICT_SKIP_MIGRATIONS", "1")
+    monkeypatch.setattr("api.main.get_session_factory", lambda: db_session_factory)
+    monkeypatch.setattr("api.deps.get_session_factory", lambda: db_session_factory)
+    app = create_app()
+
+    def override_get_db():
+        db = db_session_factory()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as test_client:
+        with db_session_factory() as session:
+            rf_version = upsert_model_version(
+                session,
+                name="random_forest",
+                version="late-rf",
+                artifact_path="models/random_forest.pkl",
+                mlflow_run_id=None,
+                trained_at=None,
+                cv_r2_mean=None,
+                cv_rmse_mean=None,
+                test_r2=None,
+                test_rmse=None,
+                hyperparameters={},
+            )
+            nn_version = upsert_model_version(
+                session,
+                name="neural_network",
+                version="late-nn",
+                artifact_path="models/neural_network.pt",
+                mlflow_run_id=None,
+                trained_at=None,
+                cv_r2_mean=None,
+                cv_rmse_mean=None,
+                test_r2=None,
+                test_rmse=None,
+                hyperparameters={},
+            )
+
+        response = test_client.post("/predict", json={"smiles": "CCO"})
+
+    assert response.status_code == 200
+    with db_session_factory() as session:
+        row = session.query(Prediction).one()
+        assert row.rf_model_version_id == rf_version.id
+        assert row.nn_model_version_id == nn_version.id
+
+
 def test_predict_invalid_smiles_does_not_persist(client, db_session) -> None:
     response = client.post("/predict", json={"smiles": "NOT_VALID"})
     assert response.status_code == 200
